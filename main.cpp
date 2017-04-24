@@ -4,10 +4,12 @@
 #include <sstream>
 #include <SDL.h>
 #include <stdio.h>
-#include <SDL_image.h>
+#include <SDL2/SDL_image.h>
 #include <SDL_mixer.h>
 #include <ctime>
 #include <Windows.h>
+#include <thread>
+
 using namespace std;
 
 class AnimationFrame {
@@ -26,6 +28,7 @@ public:
 		}
 		SDL_SetColorKey(bmp, SDL_TRUE, SDL_MapRGB(bmp->format, 0, 255, 0));
 		w = bmp->w;
+		cout << w << endl;
 		h = bmp->h;
 		frame = SDL_CreateTextureFromSurface(ren, bmp);
 		SDL_FreeSurface(bmp);
@@ -54,6 +57,7 @@ class Animation {
 protected:
 	vector<AnimationFrame *> frames;
 	int totalTime;
+	int x;
 public:
 	Animation() {
 		totalTime = 0;
@@ -62,8 +66,8 @@ public:
 		frames.push_back(c);
 		totalTime += c->getTime();
 	}
-	virtual void show(SDL_Renderer *ren, int time /*ms*/, int x = 0, int y = 0) {
-
+	virtual void show(SDL_Renderer *ren, int time /*ms*/, int _x = 0, int y = 0) {
+		x = _x;
 		int aTime = time % totalTime;
 		int tTime = 0;
 		unsigned int i = 0;
@@ -72,6 +76,9 @@ public:
 			if (aTime <= tTime) break;
 		}
 		frames[i]->show(ren, x, y);
+	}
+	int getX(){
+		return x;
 	}
 	virtual void destroy() {
 		for (unsigned int i = 0; i<frames.size(); i++)
@@ -123,7 +130,7 @@ public:
 	virtual void done() {
 		SDL_DestroyRenderer(ren);
 		SDL_DestroyWindow(win);
-		Mix_Quit();//audio
+//		Mix_Quit();//audio
 		SDL_Quit();
 	}
 	void run() {
@@ -156,6 +163,84 @@ public:
 	virtual void handleEvent(SDL_Event &event) = 0;
 };
 
+class sign{
+	volatile char target;
+	bool ishit = false;
+
+	public:
+	sign( char _t){
+		target = _t;
+	}
+	public:
+		bool hit(char typed){
+			if(typed == target)
+			{
+				ishit = true;
+				return true;
+			}
+			else return false;
+		}
+	bool getIsHit(){
+		return ishit;
+	}
+	void setIsHit(bool _h){
+		ishit = _h;
+	}
+	void change(char c){
+		target = c;
+	}
+};
+
+class in
+{
+	sign* target;
+	bool ishit;
+	bool isdone;
+	public:
+	in(sign* _t){
+		target = _t;
+		isdone = false;
+	}
+	public:
+		void run(){
+			while(!isdone){
+				if(!target->getIsHit()){
+					SDL_Event event;
+					if (SDL_PollEvent(&event))
+					{
+						if (event.type == SDL_KEYDOWN){
+							cout << "t";
+						if (event.key.keysym.sym == SDLK_a)
+						{
+							if(target->hit('a')) cout << "hit" << endl;
+						}
+						if (event.key.keysym.sym == SDLK_s)
+						{
+							if(target->hit('s')) cout << "hit" << endl;
+						}
+						if (event.key.keysym.sym == SDLK_d)
+						{
+							if(target->hit('d')) cout << "hit" << endl;
+						}
+						if (event.key.keysym.sym == SDLK_f)
+						{
+							if(target->hit('f')) cout << "hit" << endl;	
+						}
+						if (event.key.keysym.sym == SDLK_g)
+						{
+							if(target->hit('g')) cout << "hit" << endl;
+						}
+						if (event.key.keysym.sym == SDLK_q)
+						{
+							isdone = true;
+						}
+					}
+				}
+			}
+		}
+	}
+};
+
 class monorailGame :public Game {
 	bool playingm;
 	Animation startpage;
@@ -174,6 +259,9 @@ class monorailGame :public Game {
 	Animation wagon4;
 	Animation wagon5;
 	Animation trainsign;
+	sign *target;
+	thread* thred;
+	in *i;
 	int x, y;
 	int dx, dy;
 
@@ -226,21 +314,22 @@ int wagonarray[];
 			ss << "smoke" << i << ".bmp";
 			smoke.addFrame(new AnimationFrame(ren, ss.str().c_str(), 300));
 		}
-
+		target = new sign('p');
+		i = new in(target);
+		thred = new thread(&in::run, i);
 	}
 
 	void handleEvent(SDL_Event &event) {
 		
-		if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0){
-			std::cout << "Audio ERROR:" << Mix_GetError() << std::endl;
-		}
-		Mix_Chunk *backgroundM = Mix_LoadWAV("GameMoozik.wav");
-
+//		if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0){
+//			std::cout << "Audio ERROR:" << Mix_GetError() << std::endl;
+		//}
+		//Mix_Chunk *backgroundM = Mix_LoadWAV("GameMoozik.wav");
 
 		if (event.type == SDL_KEYDOWN&&playingm==false){
 			if (event.key.keysym.sym == SDLK_9)
 			{
-				Mix_PlayChannel(-1, backgroundM, 3);
+			//	Mix_PlayChannel(-1, backgroundM, 3);
 				playingm = true;
 			}
 		}
@@ -316,17 +405,27 @@ int wagonarray[];
 		for (int i = 0; i < maxtrains; i++)
 		{
 			int num;
-			num = wagonarray[i];		
-				if (num == 1)
+			num = wagonarray[i];
+				if(wagon1.getX() % 100 == 0) target->setIsHit(false);
+		
+				if (num == 1){
 					wagon1.show(ren, ticks, x + (i * 101), 320);
-				else if (num == 2)
+					if(wagon1.getX() <= 500 && wagon1.getX() + 100 >= 500) target->change('g');}
+				else if (num == 2){
 					wagon2.show(ren, ticks, x + (i * 101), 320);
-				else if (num == 3)
+					if(wagon2.getX() <= 500 && wagon2.getX() + 100 >= 500) target->change('d');}
+
+				else if (num == 3){
 					wagon3.show(ren, ticks, x + (i * 101), 320);
-				else if (num == 4)
+					if(wagon3.getX() <= 500 && wagon3.getX() + 100 >= 500) target->change('a');}
+
+				else if (num == 4){
 					wagon4.show(ren, ticks, x + (i * 101), 320);
-				else
+					if(wagon4.getX() <= 500 && wagon4.getX() + 100 >= 500) target->change('f');}
+
+				else{
 					wagon5.show(ren, ticks, x + (i * 101), 320);
+					if(wagon5.getX() <= 500 && wagon5.getX() + 100 >= 500) target->change('s');}
 				OMEGA = true;
 			
 		}
@@ -360,6 +459,7 @@ int wagonarray[];
 		wagon3.destroy();
 		wagon4.destroy();
 		wagon5.destroy();
+		thred->join();
 		Game::done();
 	}
 };
