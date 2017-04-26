@@ -195,48 +195,60 @@ class in
 {
 	sign* target;
 	bool ishit;
-	bool isdone;
+
 	public:
-	in(sign* _t){
-		target = _t;
-		isdone = false;
-	}
-	public:
+		bool isdone;
+		bool aButton;
+		bool sButton;
+		bool dButton;
+		bool fButton;
+		bool gButton;
+		SDL_Renderer* ren;
+		Animation buttonASprite;
+		in(sign* _t, Animation a, SDL_Renderer* r){
+			target = _t;
+			isdone = false;
+			buttonASprite = a;
+			ren = r;
+		}
+		
 		void run(){
 			while(!isdone){
+
 				if(!target->getIsHit()){
-					SDL_Event event;
-					if (SDL_PollEvent(&event))
-					{
-						if (event.type == SDL_KEYDOWN){
-							cout << "t";
-						if (event.key.keysym.sym == SDLK_a)
-						{
-							if(target->hit('a')) cout << "hit" << endl;
+					if(aButton){
+						if (target->hit('a')){
+							cout << "hit" << endl;
+							buttonASprite.addFrame(new AnimationFrame(ren, "btnAactive.bmp"));
 						}
-						if (event.key.keysym.sym == SDLK_s)
-						{
-							if(target->hit('s')) cout << "hit" << endl;
-						}
-						if (event.key.keysym.sym == SDLK_d)
-						{
-							if(target->hit('d')) cout << "hit" << endl;
-						}
-						if (event.key.keysym.sym == SDLK_f)
-						{
-							if(target->hit('f')) cout << "hit" << endl;	
-						}
-						if (event.key.keysym.sym == SDLK_g)
-						{
-							if(target->hit('g')) cout << "hit" << endl;
-						}
-						if (event.key.keysym.sym == SDLK_q)
-						{
-							isdone = true;
-						}
+						aButton = false;
 					}
-				}
+					if(sButton){
+						if (target->hit('s')){
+							cout << "hit" << endl;
+						}
+						sButton = false;
+					}
+					if(dButton){
+						if (target->hit('d')){
+							cout << "hit" << endl;
+						}
+						dButton = false;
+					}
+					if(fButton){
+						if (target->hit('f')){
+							cout << "hit" << endl;
+						}
+						fButton = false;
+					}
+					if(gButton){
+						if (target->hit('g')){
+							cout << "hit" << endl;
+						}	
+						gButton = false;
+					}
 			}
+			
 		}
 	}
 };
@@ -306,8 +318,6 @@ int wagonarray[];
 			int num = rand() % 5 + 1;
 			wagonarray[i] = num;
 		}
-
-		 
 		
 		for (int i = 1; i <= 6; i++) {
 			stringstream ss;
@@ -315,7 +325,7 @@ int wagonarray[];
 			smoke.addFrame(new AnimationFrame(ren, ss.str().c_str(), 300));
 		}
 		target = new sign('p');
-		i = new in(target);
+		i = new in(target, buttonA, ren);
 		thred = new thread(&in::run, i);
 	}
 
@@ -339,63 +349,32 @@ int wagonarray[];
 			if (event.key.keysym.sym == SDLK_RETURN)
 			{
 				startpage.destroy();
+			}			
+			if (event.key.keysym.sym == SDLK_a)
+			{
+				i->aButton = true;
 			}
-			
+			if (event.key.keysym.sym == SDLK_s)
+			{
+				i->sButton = true;
+			}
+			if (event.key.keysym.sym == SDLK_d)
+			{
+				i->dButton = true;
+			}
+			if (event.key.keysym.sym == SDLK_f)
+			{
+				i->fButton = true;	
+			}
+			if (event.key.keysym.sym == SDLK_g)
+			{
+				i->gButton = true;
+			}
+			if (event.key.keysym.sym == SDLK_q)
+			{
+				i->isdone = true;
+			}
 		}
-
-			if (event.type == SDL_KEYDOWN){
-				if (event.key.keysym.sym == SDLK_a)
-				{
-					//image for pressed button
-					//buttonA.addFrame(new AnimationFrame(ren, "btnAactive.bmp"));
-				
-					//set dx so train starts until one of the buttons is pressed
-					//gains speed as the user inputs correct matches
-					//game over screen if they loose
-					//dx = -2;
-				}
-			}
-			if (event.type == SDL_KEYUP){
-				if (event.key.keysym.sym == SDLK_a)
-				{
-					
-				}
-			}
-			if (event.type == SDL_KEYDOWN){
-				if (event.key.keysym.sym == SDLK_s)
-				{
-					//image for pressed button
-					//buttonA.addFrame(new AnimationFrame(ren, "btnSactive.bmp"));
-					
-				}
-			}
-
-			if (event.type == SDL_KEYDOWN){
-				if (event.key.keysym.sym == SDLK_d)
-				{
-					//image for pressed button
-					//buttonA.addFrame(new AnimationFrame(ren, "btnDactive.bmp"));
-					
-				}
-			}
-			if (event.type == SDL_KEYDOWN){
-				if (event.key.keysym.sym == SDLK_f)
-				{
-					//image for pressed button
-					//buttonA.addFrame(new AnimationFrame(ren, "btnFactive.bmp"));
-					
-				}
-			}
-
-			if (event.type == SDL_KEYDOWN){
-				if (event.key.keysym.sym == SDLK_g)
-				{
-					//image for pressed button
-					//buttonA.addFrame(new AnimationFrame(ren, "btnGactive.bmp"));
-					
-				}
-			}
-		
 	}
 	void show() {
 		
@@ -406,7 +385,7 @@ int wagonarray[];
 		{
 			int num;
 			num = wagonarray[i];
-				if(wagon1.getX() % 100 == 0) target->setIsHit(false);
+				if(wagon1.getX() % 100 == 1) target->setIsHit(false);
 		
 				if (num == 1){
 					wagon1.show(ren, ticks, x + (i * 101), 320);
