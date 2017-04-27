@@ -4,12 +4,10 @@
 #include <sstream>
 #include <SDL.h>
 #include <stdio.h>
-#include <SDL2/SDL_image.h>
+#include <SDL_image.h>
 #include <SDL_mixer.h>
 #include <ctime>
 #include <Windows.h>
-#include <thread>
-
 using namespace std;
 
 class AnimationFrame {
@@ -28,7 +26,6 @@ public:
 		}
 		SDL_SetColorKey(bmp, SDL_TRUE, SDL_MapRGB(bmp->format, 0, 255, 0));
 		w = bmp->w;
-		cout << w << endl;
 		h = bmp->h;
 		frame = SDL_CreateTextureFromSurface(ren, bmp);
 		SDL_FreeSurface(bmp);
@@ -57,7 +54,6 @@ class Animation {
 protected:
 	vector<AnimationFrame *> frames;
 	int totalTime;
-	int x;
 public:
 	Animation() {
 		totalTime = 0;
@@ -66,8 +62,8 @@ public:
 		frames.push_back(c);
 		totalTime += c->getTime();
 	}
-	virtual void show(SDL_Renderer *ren, int time /*ms*/, int _x = 0, int y = 0) {
-		x = _x;
+	virtual void show(SDL_Renderer *ren, int time /*ms*/, int x = 0, int y = 0) {
+
 		int aTime = time % totalTime;
 		int tTime = 0;
 		unsigned int i = 0;
@@ -76,9 +72,6 @@ public:
 			if (aTime <= tTime) break;
 		}
 		frames[i]->show(ren, x, y);
-	}
-	int getX(){
-		return x;
 	}
 	virtual void destroy() {
 		for (unsigned int i = 0; i<frames.size(); i++)
@@ -104,8 +97,8 @@ protected:
 	int ticks;
 	bool finished;
 public:
-	virtual void init(const char *gameName, int maxW = 1000, int maxH = 580, int
-		startX = 100, int startY = 100) {
+	virtual void init(const char *gameName, int maxW = 1000, int maxH = 580, int startX = 100, int startY = 100) 
+	{
 		if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0){
 			std::cout << "SDL_Init Error: " << SDL_GetError() << std::endl;
 			return;
@@ -130,7 +123,7 @@ public:
 	virtual void done() {
 		SDL_DestroyRenderer(ren);
 		SDL_DestroyWindow(win);
-//		Mix_Quit();//audio
+		Mix_Quit();//audio
 		SDL_Quit();
 	}
 	void run() {
@@ -162,97 +155,8 @@ public:
 	virtual void show() = 0;
 	virtual void handleEvent(SDL_Event &event) = 0;
 };
-
-class sign{
-	volatile char target;
-	bool ishit = false;
-
-	public:
-	sign( char _t){
-		target = _t;
-	}
-	public:
-		bool hit(char typed){
-			if(typed == target)
-			{
-				ishit = true;
-				return true;
-			}
-			else return false;
-		}
-	bool getIsHit(){
-		return ishit;
-	}
-	void setIsHit(bool _h){
-		ishit = _h;
-	}
-	void change(char c){
-		target = c;
-	}
-};
-
-class in
-{
-	sign* target;
-	bool ishit;
-
-	public:
-		bool isdone;
-		bool aButton;
-		bool sButton;
-		bool dButton;
-		bool fButton;
-		bool gButton;
-		SDL_Renderer* ren;
-		Animation buttonASprite;
-		in(sign* _t, Animation a, SDL_Renderer* r){
-			target = _t;
-			isdone = false;
-			buttonASprite = a;
-			ren = r;
-		}
-		
-		void run(){
-			while(!isdone){
-
-				if(!target->getIsHit()){
-					if(aButton){
-						if (target->hit('a')){
-							cout << "hit" << endl;
-							buttonASprite.addFrame(new AnimationFrame(ren, "btnAactive.bmp"));
-						}
-						aButton = false;
-					}
-					if(sButton){
-						if (target->hit('s')){
-							cout << "hit" << endl;
-						}
-						sButton = false;
-					}
-					if(dButton){
-						if (target->hit('d')){
-							cout << "hit" << endl;
-						}
-						dButton = false;
-					}
-					if(fButton){
-						if (target->hit('f')){
-							cout << "hit" << endl;
-						}
-						fButton = false;
-					}
-					if(gButton){
-						if (target->hit('g')){
-							cout << "hit" << endl;
-						}	
-						gButton = false;
-					}
-			}
-			
-		}
-	}
-};
-
+bool OMEGA=false;
+const int maxtrains = 40;
 class monorailGame :public Game {
 	bool playingm;
 	Animation startpage;
@@ -271,110 +175,119 @@ class monorailGame :public Game {
 	Animation wagon4;
 	Animation wagon5;
 	Animation trainsign;
-	sign *target;
-	thread* thred;
-	in *i;
 	int x, y;
 	int dx, dy;
 
 public:
-bool OMEGA=false;
-const int maxtrains = 15;
-int wagonarray[];
-
-	void init(const char *gameName = "Color Tracks", int maxW = 640, int maxH = 480, int
-		startX = 10, int startY = 100){
+int wagonarray[maxtrains];
+	bool once = true;
+	bool pause = false;
+	void init(const char *gameName = "Color Tracks", int maxW = 640, int maxH = 480, int startX = 10, int startY = 100)
+	{
 		playingm = false;
 		Game::init(gameName);
+		
 		for (int i = 1; i <= 5; i++)
 		{
 			stringstream ss;
 			ss << "tstart" << i << ".bmp";
 			startpage.addFrame(new AnimationFrame(ren, ss.str().c_str(), 500));
 		}
-		
-		a.addFrame(new AnimationFrame(ren, "desert.bmp"));
-		buttonA.addFrame(new AnimationFrame(ren, "btnA.bmp"));
-		buttonD.addFrame(new AnimationFrame(ren, "btnD.bmp"));
-		buttonS.addFrame(new AnimationFrame(ren, "btnS.bmp"));
-		buttonF.addFrame(new AnimationFrame(ren, "btnF.bmp"));
-		buttonG.addFrame(new AnimationFrame(ren, "btnG.bmp"));
-		locomotive.addFrame(new AnimationFrame(ren, "traindriver.bmp"));
-		wagon1.addFrame(new AnimationFrame(ren, "wagon1.bmp"));
-		wagon2.addFrame(new AnimationFrame(ren, "wagon2.bmp"));
-		wagon3.addFrame(new AnimationFrame(ren, "wagon3.bmp"));
-		wagon4.addFrame(new AnimationFrame(ren, "wagon4.bmp"));
-		wagon5.addFrame(new AnimationFrame(ren, "wagon5.bmp"));
-		trainsign.addFrame(new AnimationFrame(ren, "trainsign2.bmp"));
-		
-		dx = -1.5;
-		//dy = 1;
-		x = 900;
-		y = 0;
-
-		srand(time(NULL));
-		for (int i = 0; i < maxtrains-1; i++)
-		{
-			int num = rand() % 5 + 1;
-			wagonarray[i] = num;
-		}
-		
-		for (int i = 1; i <= 6; i++) {
-			stringstream ss;
-			ss << "smoke" << i << ".bmp";
-			smoke.addFrame(new AnimationFrame(ren, ss.str().c_str(), 300));
-		}
-		target = new sign('p');
-		i = new in(target, buttonA, ren);
-		thred = new thread(&in::run, i);
+		Gamestate(true);
 	}
 
 	void handleEvent(SDL_Event &event) {
 		
-//		if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0){
-//			std::cout << "Audio ERROR:" << Mix_GetError() << std::endl;
-		//}
-		//Mix_Chunk *backgroundM = Mix_LoadWAV("GameMoozik.wav");
+		if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0){
+			std::cout << "Audio ERROR:" << Mix_GetError() << std::endl;
+		}
+		Mix_Chunk *backgroundM = Mix_LoadWAV("GameMoozik.wav");
+
 
 		if (event.type == SDL_KEYDOWN&&playingm==false){
 			if (event.key.keysym.sym == SDLK_9)
 			{
-			//	Mix_PlayChannel(-1, backgroundM, 3);
+				Mix_PlayChannel(-1, backgroundM, 3);
 				playingm = true;
 			}
 		}
-		
-
 		if (event.type == SDL_KEYDOWN){
 			if (event.key.keysym.sym == SDLK_RETURN)
 			{
 				startpage.destroy();
-			}			
-			if (event.key.keysym.sym == SDLK_a)
-			{
-				i->aButton = true;
+				if(once){
+				Gamestate(false);
+				once = false;
+				}
 			}
-			if (event.key.keysym.sym == SDLK_s)
-			{
-				i->sButton = true;
-			}
-			if (event.key.keysym.sym == SDLK_d)
-			{
-				i->dButton = true;
-			}
-			if (event.key.keysym.sym == SDLK_f)
-			{
-				i->fButton = true;	
-			}
-			if (event.key.keysym.sym == SDLK_g)
-			{
-				i->gButton = true;
-			}
-			if (event.key.keysym.sym == SDLK_q)
-			{
-				i->isdone = true;
+			
+		}
+		
+		
+
+		
+			if (event.type == SDL_KEYDOWN){
+				if (event.key.keysym.sym == SDLK_p)
+				{
+					//image for pressed button
+					if(pause == false){
+						dx = 0;
+						pause = true;
+					}
+					else{
+						dx = -1.5;
+						pause = false;
+					}
+				}
+				if(!pause)
+				{
+				
+					if (event.key.keysym.sym == SDLK_a)
+					{
+						//image for pressed button
+						cout << "a" << endl;
+						buttonA.destroy();
+						//buttonA.addFrame(new AnimationFrame(ren, "btnA.bmp",0));
+					}			
+					if (event.key.keysym.sym == SDLK_s)
+					{
+						cout << "s" << endl;
+						buttonS.destroy();
+						//image for pressed button
+						//buttonA.addFrame(new AnimationFrame(ren, "btnSactive.bmp"));
+					}
+					if (event.key.keysym.sym == SDLK_d)
+					{
+						buttonD.destroy();
+						cout << "d" << endl;
+						//image for pressed button
+						//buttonA.addFrame(new AnimationFrame(ren, "btnDactive.bmp"));
+					}
+					if (event.key.keysym.sym == SDLK_f)
+					{
+						buttonF.destroy();
+						cout << "f" << endl;
+						//image for pressed button
+						//buttonA.addFrame(new AnimationFrame(ren, "btnFactive.bmp"));
+					}
+					if (event.key.keysym.sym == SDLK_g)
+					{
+						buttonG.destroy();
+						cout << "g" << endl;
+						//image for pressed button
+						//buttonA.addFrame(new AnimationFrame(ren, "btnGactive.bmp"));
+					}
 			}
 		}
+			//if (event.type == SDL_KEYUP){
+				//if (event.key.keysym.sym == SDLK_a)
+				//{
+					//buttonA.destroy();
+					//buttonA.addFrame(new AnimationFrame(ren, "btnA.bmp"));
+					//cout << "a" << endl;
+				//}
+			//}
+		
 	}
 	void show() {
 		
@@ -384,27 +297,17 @@ int wagonarray[];
 		for (int i = 0; i < maxtrains; i++)
 		{
 			int num;
-			num = wagonarray[i];
-				if(wagon1.getX() % 100 == 1) target->setIsHit(false);
-		
-				if (num == 1){
+			num = wagonarray[i];		
+				if (num == 1)
 					wagon1.show(ren, ticks, x + (i * 101), 320);
-					if(wagon1.getX() <= 500 && wagon1.getX() + 100 >= 500) target->change('g');}
-				else if (num == 2){
+				else if (num == 2)
 					wagon2.show(ren, ticks, x + (i * 101), 320);
-					if(wagon2.getX() <= 500 && wagon2.getX() + 100 >= 500) target->change('d');}
-
-				else if (num == 3){
+				else if (num == 3)
 					wagon3.show(ren, ticks, x + (i * 101), 320);
-					if(wagon3.getX() <= 500 && wagon3.getX() + 100 >= 500) target->change('a');}
-
-				else if (num == 4){
+				else if (num == 4)
 					wagon4.show(ren, ticks, x + (i * 101), 320);
-					if(wagon4.getX() <= 500 && wagon4.getX() + 100 >= 500) target->change('f');}
-
-				else{
+				else
 					wagon5.show(ren, ticks, x + (i * 101), 320);
-					if(wagon5.getX() <= 500 && wagon5.getX() + 100 >= 500) target->change('s');}
 				OMEGA = true;
 			
 		}
@@ -428,9 +331,9 @@ int wagonarray[];
 		startpage.destroy();
 		buttonA.destroy();
 		buttonS.destroy();
-		buttonD.destroy();//
-		buttonF.destroy();//
-		buttonG.destroy();//
+		buttonD.destroy();
+		buttonF.destroy();
+		buttonG.destroy();
 		smoke.destroy();
 		locomotive.destroy();
 		wagon1.destroy();
@@ -438,9 +341,47 @@ int wagonarray[];
 		wagon3.destroy();
 		wagon4.destroy();
 		wagon5.destroy();
-		thred->join();
 		Game::done();
 	}
+	void Gamestate(bool load)
+	{
+		if (load)
+		{
+		a.addFrame(new AnimationFrame(ren, "desert.bmp"));
+		buttonA.addFrame(new AnimationFrame(ren, "btnA.bmp"));
+		buttonD.addFrame(new AnimationFrame(ren, "btnD.bmp"));
+		buttonS.addFrame(new AnimationFrame(ren, "btnS.bmp"));
+		buttonF.addFrame(new AnimationFrame(ren, "btnF.bmp"));
+		buttonG.addFrame(new AnimationFrame(ren, "btnG.bmp"));
+		locomotive.addFrame(new AnimationFrame(ren, "traindriver.bmp"));
+		wagon1.addFrame(new AnimationFrame(ren, "wagon1.bmp"));
+		wagon2.addFrame(new AnimationFrame(ren, "wagon2.bmp"));
+		wagon3.addFrame(new AnimationFrame(ren, "wagon3.bmp"));
+		wagon4.addFrame(new AnimationFrame(ren, "wagon4.bmp"));
+		wagon5.addFrame(new AnimationFrame(ren, "wagon5.bmp"));
+		trainsign.addFrame(new AnimationFrame(ren, "trainsign2.bmp"));
+		for (int i = 1; i <= 6; i++) {
+			stringstream ss;
+			ss << "smoke" << i << ".bmp";
+			smoke.addFrame(new AnimationFrame(ren, ss.str().c_str(), 300));
+		}
+		load = false;
+		}
+		if(!load)
+		{
+		dx = -1.5;
+		//dy = 1;
+		x = 900;
+		y = 0;
+		
+		srand(time(NULL));
+		for (int i = 0; i < maxtrains - 1; i++)
+		{
+			int num = rand() % 5 + 1;
+			wagonarray[i] = num;
+		}
+	}
+}
 };
 
 int main(int argc, char **argv) {
