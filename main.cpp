@@ -4,23 +4,31 @@
 #include <sstream>
 #include <SDL.h>
 #include <stdio.h>
-#include <SDL2/SDL_image.h>
+#include <SDL_image.h>
 #include <SDL_mixer.h>
 #include <ctime>
 #include <Windows.h>
 #include <thread>
-
+#include <SDL_ttf.h>
+Uint32 white;
 using namespace std;
 
+int scoreNum;
+//TTF_Font *font = NULL;
 class AnimationFrame {
 	SDL_Texture *frame;
+	
+
 	int time, w, h; // ms
 public:
 	AnimationFrame(SDL_Texture *newFrame, int newTime = 100) {
 		frame = newFrame;
+
 		time = newTime;
 	}
 	AnimationFrame(SDL_Renderer *ren, const char *imagePath, int newTime = 100){
+
+
 		SDL_Surface *bmp = SDL_LoadBMP(imagePath);
 		if (bmp == NULL){
 			std::cout << "SDL_LoadBMP Error: " << SDL_GetError() << std::endl;
@@ -30,6 +38,7 @@ public:
 		w = bmp->w;
 		cout << w << endl;
 		h = bmp->h;
+
 		frame = SDL_CreateTextureFromSurface(ren, bmp);
 		SDL_FreeSurface(bmp);
 		if (frame == NULL){
@@ -37,13 +46,18 @@ public:
 				std::endl;
 			SDL_Quit();
 		}
+
 		time = newTime;
+		
+
 	}
 	void show(SDL_Renderer *ren, int x = 0, int y = 0){
 		SDL_Rect src, dest;
 		dest.x = x; dest.y = y; dest.w = w; dest.h = h;
 		src.x = 0; src.y = 0; src.w = w; src.h = h;
 		SDL_RenderCopy(ren, frame, &src, &dest);
+		
+
 	}
 	int getTime() {
 		return time;
@@ -86,7 +100,7 @@ public:
 	}
 };
 class Sprite : public Animation {
-	float x, dx, ax, y, dy, ay;
+	double x, dx, ax, y, dy, ay;
 public:
 	Sprite() :Animation() {
 		x = 0.0; dx = 0.0; ax = 0.0;
@@ -101,6 +115,8 @@ class Game {
 protected:
 	SDL_Window *win;
 	SDL_Renderer *ren;
+
+
 	int ticks;
 	bool finished;
 public:
@@ -109,6 +125,10 @@ public:
 		if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0){
 			std::cout << "SDL_Init Error: " << SDL_GetError() << std::endl;
 			return;
+		}
+		if (TTF_Init() == -1)
+		{
+			std::cout << "TTF_Init Error: " << SDL_GetError() << std::endl;
 		}
 		win = SDL_CreateWindow(gameName, startX, startY, maxW, maxH, SDL_WINDOW_SHOWN);
 		if (win == NULL){
@@ -130,7 +150,9 @@ public:
 	virtual void done() {
 		SDL_DestroyRenderer(ren);
 		SDL_DestroyWindow(win);
-//		Mix_Quit();//audio
+
+		TTF_Quit();
+		Mix_Quit();
 		SDL_Quit();
 	}
 	void run() {
@@ -167,19 +189,20 @@ class sign{
 	volatile char target;
 	bool ishit = false;
 
-	public:
-	sign( char _t){
+public:
+	sign(char _t){
 		target = _t;
 	}
-	public:
-		bool hit(char typed){
-			if(typed == target)
-			{
-				ishit = true;
-				return true;
-			}
-			else return false;
+public:
+	bool hit(char typed){
+		if (typed == target)
+		{
+			ishit = true;
+			return true;
+
 		}
+		else return false;
+	}
 	bool getIsHit(){
 		return ishit;
 	}
@@ -196,60 +219,80 @@ class in
 	sign* target;
 	bool ishit;
 
-	public:
-		bool isdone;
-		bool aButton;
-		bool sButton;
-		bool dButton;
-		bool fButton;
-		bool gButton;
-		SDL_Renderer* ren;
-		Animation buttonASprite;
-		in(sign* _t, Animation a, SDL_Renderer* r){
-			target = _t;
-			isdone = false;
-			buttonASprite = a;
-			ren = r;
-		}
+public:
+	bool isdone;
+	bool aButton;
+	bool sButton;
+	bool dButton;
+	bool fButton;
+	bool gButton;
+	
+	Mix_Chunk *correctPress;
+	SDL_Renderer* ren;
+	Animation buttonASprite;
+	in(sign* _t, Animation a, SDL_Renderer* r){
+		target = _t;
+		isdone = false;
+		buttonASprite = a;
+		ren = r;
 		
-		void run(){
-			while(!isdone){
+	}
 
-				if(!target->getIsHit()){
-					if(aButton){
-						if (target->hit('a')){
-							cout << "hit" << endl;
-							buttonASprite.addFrame(new AnimationFrame(ren, "btnAactive.bmp"));
-						}
-						aButton = false;
+	void run(){
+		while (!isdone){
+			correctPress = Mix_LoadWAV("ding1.wav");
+			if (!target->getIsHit()){
+				if (aButton){
+					if (target->hit('a')){
+						cout << "hit" << endl;
+						Mix_PlayChannel(-1, correctPress, 0);
+						scoreNum+=1;
+						buttonASprite.addFrame(new AnimationFrame(ren, "btnAactive.bmp"));
 					}
-					if(sButton){
-						if (target->hit('s')){
-							cout << "hit" << endl;
-						}
-						sButton = false;
+					aButton = false;
+				}
+				if (sButton){
+					if (target->hit('s')){
+						cout << "hit" << endl;
+						Mix_PlayChannel(-1, correctPress, 0);
+						
+						scoreNum += 1;
 					}
-					if(dButton){
-						if (target->hit('d')){
-							cout << "hit" << endl;
-						}
-						dButton = false;
+					sButton = false;
+				}
+				if (dButton){
+					if (target->hit('d')){
+						cout << "hit" << endl;
+						Mix_PlayChannel(-1, correctPress, 0);
+						
+						scoreNum += 1;
 					}
-					if(fButton){
-						if (target->hit('f')){
-							cout << "hit" << endl;
-						}
-						fButton = false;
+					dButton = false;
+				}
+				if (fButton){
+					if (target->hit('f')){
+						cout << "hit" << endl;
+						Mix_PlayChannel(-1, correctPress, 0);
+					
+						scoreNum += 1;
 					}
-					if(gButton){
-						if (target->hit('g')){
-							cout << "hit" << endl;
-						}	
-						gButton = false;
+					fButton = false;
+				}
+				if (gButton){
+					if (target->hit('g')){
+						cout << "hit" << endl;
+						Mix_PlayChannel(-1, correctPress, 0);
+						
+						scoreNum += 1;
 					}
+					
+					gButton = false;
+				}
 			}
 			
+
 		}
+		Mix_FreeChunk(correctPress);
 	}
 };
 
@@ -271,28 +314,45 @@ class monorailGame :public Game {
 	Animation wagon4;
 	Animation wagon5;
 	Animation trainsign;
+	Animation score;
 	sign *target;
 	thread* thred;
 	in *i;
 	int x, y;
-	int dx, dy;
+	double dx, dy;
+	SDL_Surface *message;
+	SDL_Color textColor;
+	SDL_Texture *text;
+	SDL_Rect textRect;
+	TTF_Font *font;
+
 
 public:
-bool OMEGA=false;
-const int maxtrains = 15;
-int wagonarray[];
-
+	bool OMEGA = false;
+	const int maxtrains = 15;
+	int wagonarray[15];
+	int w, h;
 	void init(const char *gameName = "Color Tracks", int maxW = 640, int maxH = 480, int
 		startX = 10, int startY = 100){
 		playingm = false;
 		Game::init(gameName);
+
+		font = TTF_OpenFont("arial.ttf", 30);
+		if (font == NULL){
+
+			std::cout << "Font Error: " << SDL_GetError() <<
+				std::endl;
+		}
+
+		textColor.r = 255, textColor.g = 255, textColor.b = 255;
+
 		for (int i = 1; i <= 5; i++)
 		{
 			stringstream ss;
 			ss << "tstart" << i << ".bmp";
 			startpage.addFrame(new AnimationFrame(ren, ss.str().c_str(), 500));
 		}
-		
+
 		a.addFrame(new AnimationFrame(ren, "desert.bmp"));
 		buttonA.addFrame(new AnimationFrame(ren, "btnA.bmp"));
 		buttonD.addFrame(new AnimationFrame(ren, "btnD.bmp"));
@@ -306,19 +366,19 @@ int wagonarray[];
 		wagon4.addFrame(new AnimationFrame(ren, "wagon4.bmp"));
 		wagon5.addFrame(new AnimationFrame(ren, "wagon5.bmp"));
 		trainsign.addFrame(new AnimationFrame(ren, "trainsign2.bmp"));
-		
+		score.addFrame(new AnimationFrame(ren, "score.bmp"));
 		dx = -1.5;
 		//dy = 1;
 		x = 900;
 		y = 0;
 
 		srand(time(NULL));
-		for (int i = 0; i < maxtrains-1; i++)
+		for (int i = 0; i < maxtrains - 1; i++)
 		{
 			int num = rand() % 5 + 1;
 			wagonarray[i] = num;
 		}
-		
+
 		for (int i = 1; i <= 6; i++) {
 			stringstream ss;
 			ss << "smoke" << i << ".bmp";
@@ -328,31 +388,32 @@ int wagonarray[];
 		i = new in(target, buttonA, ren);
 		thred = new thread(&in::run, i);
 	}
-
+	
 	void handleEvent(SDL_Event &event) {
-		
-//		if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0){
-//			std::cout << "Audio ERROR:" << Mix_GetError() << std::endl;
-		//}
-		//Mix_Chunk *backgroundM = Mix_LoadWAV("GameMoozik.wav");
 
-		if (event.type == SDL_KEYDOWN&&playingm==false){
+		if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0){
+			std::cout << "Audio ERROR:" << Mix_GetError() << std::endl;
+		}
+		Mix_Chunk *backgroundM = Mix_LoadWAV("GameMoozik.wav");
+
+		if (event.type == SDL_KEYDOWN&&playingm == false){
 			if (event.key.keysym.sym == SDLK_9)
 			{
-			//	Mix_PlayChannel(-1, backgroundM, 3);
+				Mix_PlayChannel(-1, backgroundM, -1);
 				playingm = true;
 			}
 		}
-		
 
 		if (event.type == SDL_KEYDOWN){
 			if (event.key.keysym.sym == SDLK_RETURN)
 			{
 				startpage.destroy();
-			}			
+			}
 			if (event.key.keysym.sym == SDLK_a)
 			{
 				i->aButton = true;
+
+
 			}
 			if (event.key.keysym.sym == SDLK_s)
 			{
@@ -364,7 +425,7 @@ int wagonarray[];
 			}
 			if (event.key.keysym.sym == SDLK_f)
 			{
-				i->fButton = true;	
+				i->fButton = true;
 			}
 			if (event.key.keysym.sym == SDLK_g)
 			{
@@ -376,37 +437,42 @@ int wagonarray[];
 			}
 		}
 	}
+
 	void show() {
-		
+
 		a.show(ren, ticks);
-		
-		
+
 		for (int i = 0; i < maxtrains; i++)
 		{
 			int num;
 			num = wagonarray[i];
-				if(wagon1.getX() % 100 == 1) target->setIsHit(false);
-		
-				if (num == 1){
-					wagon1.show(ren, ticks, x + (i * 101), 320);
-					if(wagon1.getX() <= 500 && wagon1.getX() + 100 >= 500) target->change('g');}
-				else if (num == 2){
-					wagon2.show(ren, ticks, x + (i * 101), 320);
-					if(wagon2.getX() <= 500 && wagon2.getX() + 100 >= 500) target->change('d');}
+			if (wagon1.getX() % 100 == 1) target->setIsHit(false);
 
-				else if (num == 3){
-					wagon3.show(ren, ticks, x + (i * 101), 320);
-					if(wagon3.getX() <= 500 && wagon3.getX() + 100 >= 500) target->change('a');}
+			if (num == 1){
+				wagon1.show(ren, ticks, x + (i * 101), 320);
+				if (wagon1.getX() <= 500 && wagon1.getX() + 100 >= 500) target->change('g');
+			}
+			else if (num == 2){
+				wagon2.show(ren, ticks, x + (i * 101), 320);
+				if (wagon2.getX() <= 500 && wagon2.getX() + 100 >= 500) target->change('d');
+			}
 
-				else if (num == 4){
-					wagon4.show(ren, ticks, x + (i * 101), 320);
-					if(wagon4.getX() <= 500 && wagon4.getX() + 100 >= 500) target->change('f');}
+			else if (num == 3){
+				wagon3.show(ren, ticks, x + (i * 101), 320);
+				if (wagon3.getX() <= 500 && wagon3.getX() + 100 >= 500) target->change('a');
+			}
 
-				else{
-					wagon5.show(ren, ticks, x + (i * 101), 320);
-					if(wagon5.getX() <= 500 && wagon5.getX() + 100 >= 500) target->change('s');}
-				OMEGA = true;
-			
+			else if (num == 4){
+				wagon4.show(ren, ticks, x + (i * 101), 320);
+				if (wagon4.getX() <= 500 && wagon4.getX() + 100 >= 500) target->change('f');
+			}
+
+			else{
+				wagon5.show(ren, ticks, x + (i * 101), 320);
+				if (wagon5.getX() <= 500 && wagon5.getX() + 100 >= 500) target->change('s');
+			}
+			OMEGA = true;
+
 		}
 
 		locomotive.show(ren, ticks, x - 175, 293);
@@ -415,10 +481,28 @@ int wagonarray[];
 		buttonD.show(ren, ticks, 450, 470);
 		buttonF.show(ren, ticks, 560, 470);
 		buttonG.show(ren, ticks, 660, 470);
-		smoke.show(ren, ticks, x-175, y);
+		smoke.show(ren, ticks, x - 175, y);
 		trainsign.show(ren, ticks, 10, 40);
-
+		score.show(ren, ticks, 20, 25);
 		startpage.show(ren, ticks);
+		stringstream scoreN;
+		scoreN << scoreNum;
+		message = TTF_RenderText_Solid(font, scoreN.str().c_str(), textColor);
+		//cout <<scoreNum <<endl;
+		text = SDL_CreateTextureFromSurface(ren, message);
+		if (text == NULL){
+			std::cout << "text SDL_CreateTextureFromSurface Error: " << SDL_GetError() <<
+				std::endl;
+			SDL_Quit(); 
+		}
+		
+		SDL_QueryTexture(text, NULL, NULL, &w, &h);
+		textRect.x = 135; textRect.y = 19; textRect.w = w; textRect.h = h;
+		SDL_RenderCopy(ren, text, NULL, &textRect);
+		////SDL_RenderPresent(ren);
+		SDL_DestroyTexture(text);
+		SDL_FreeSurface(message);
+
 		x += dx;
 		y += dy;
 	}
@@ -438,6 +522,7 @@ int wagonarray[];
 		wagon3.destroy();
 		wagon4.destroy();
 		wagon5.destroy();
+		TTF_CloseFont;
 		thred->join();
 		Game::done();
 	}
